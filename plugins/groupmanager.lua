@@ -289,7 +289,7 @@ local function pre_process(msg)
     local hash = 'user:'..msg.from.id..':floodc'
     local msgs = tonumber(redis:get(hash) or 0)
     if msgs > NUM_MSG_MAX then
-      if is_anti_spam(msg) and not is_momod(msg) then
+      if is_anti_spam(msg) and not is_mod(msg) then
         send_large_msg(get_receiver(msg), 'Don\'t spam!')
         chat_del_user(receiver, 'user#id'..msg.from.id, ok_cb, true)
         msg = nil
