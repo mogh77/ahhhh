@@ -45,7 +45,7 @@ local function show_group_settings(target)
       NUM_MSG_MAX = tonumber(data[tostring(target)]['settings']['flood_msg_max'])
       print('custom'..NUM_MSG_MAX)
     else 
-      NUM_MSG_MAX = 5
+      NUM_MSG_MAX = 4
     end
   end
   local settings = data[tostring(target)]['settings']
@@ -138,7 +138,7 @@ function run(msg, matches)
   end
   if matches[1] == "all" and not matches[2] then
     local receiver = get_receiver(msg)
-    if not is_owner(msg) then
+    if not is_momod(msg) then
       return
     end
     return all(msg.to.id, receiver)
