@@ -2,7 +2,7 @@ antichat = {} -- An empty table for solving multiple kicking problem
 
 do
 local function run(msg, matches)
-    if is_momod(msg) then -- Ignore mods,owner,admins
+    if is_mod(msg) then -- Ignore mods,owner,admins
     return
   end
 local data = load_data(_config.moderation.data)
