@@ -676,7 +676,7 @@ end
 
 
 --Check if user is the mod of that group or not
-function is_momod(msg)
+function is_mod(msg)
   local var = false
   local data = load_data(_config.moderation.data)
   local user = msg.from.id
