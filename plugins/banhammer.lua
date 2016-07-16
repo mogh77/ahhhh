@@ -143,7 +143,7 @@ local function run(msg, matches)
     end
   end
 
-  if not is_momod(msg) then -- Ignore normal users 
+  if not is_mod(msg) then -- Ignore normal users 
     return
   end
 
