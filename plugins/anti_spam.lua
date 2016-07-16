@@ -1,133 +1,99 @@
-
---An empty table for solving multiple kicking problem(thanks to @topkecleon )
-kicktable = {}
-
+-- data saved to moderation.json
 do
 
-local TIME_CHECK = 2 -- seconds
-local data = load_data(_config.moderation.data)
--- Save stats, ban user
+-- make sure to set with value that not higher than stats.lua
+local NUM_MSG_MAX = 4  -- Max number of messages per TIME_CHECK seconds
+local TIME_CHECK = 4
+
+local function is_anti_flood(msg)
+	local data = load_data(_config.moderation.data)
+	local anti_flood_stat = data[tostring(msg.to.id)]['settings']['anti_flood']
+	if anti_flood_stat == 'kick' or anti_flood_stat == 'ban' then
+		return true
+	else
+		return false
+	end
+end
+
 local function pre_process(msg)
-  -- Ignore service msg
-  if msg.service then
-    return msg
-  end
-  if msg.from.id == our_id then
-    return msg
-  end
-  
-    -- Save user on Redis
-  if msg.from.type == 'user' then
-    local hash = 'user:'..msg.from.id
-    print('Saving user', hash)
-    if msg.from.print_name then
-      redis:hset(hash, 'print_name', msg.from.print_name)
-    end
-    if msg.from.first_name then
-      redis:hset(hash, 'first_name', msg.from.first_name)
-    end
-    if msg.from.last_name then
-      redis:hset(hash, 'last_name', msg.from.last_name)
-    end
-    if msg.from.username then
-      redis:hset(hash, 'username', msg.from.username)
-    end
-  end
 
-  -- Save stats on Redis
-  if msg.to.type == 'chat' then
-    -- User is on chat
-    local hash = 'chat:'..msg.to.id..':users'
-    redis:sadd(hash, msg.from.id)
-  end
-
-
-
-  -- Total user msgs
-  local hash = 'msgs:'..msg.from.id..':'..msg.to.id
+  local user = msg.from.id
+  local chat = msg.to.id
+  local hash = 'floodc:'..user..':'..chat
   redis:incr(hash)
-
-  --Load moderation data
-  local data = load_data(_config.moderation.data)
-  if data[tostring(msg.to.id)] then
-    --Check if flood is one or off
-    if data[tostring(msg.to.id)]['settings']['flood'] == 'no' then
-      return msg
-    end
-  end
-
-  -- Check flood
   if msg.from.type == 'user' then
-    local hash = 'user:'..msg.from.id..':msgs'
+    local hash = 'user:'..user..':floodc'
     local msgs = tonumber(redis:get(hash) or 0)
-    local data = load_data(_config.moderation.data)
-    local NUM_MSG_MAX = 5
-    if data[tostring(msg.to.id)] then
-      if data[tostring(msg.to.id)]['settings']['flood_msg_max'] then
-        NUM_MSG_MAX = tonumber(data[tostring(msg.to.id)]['settings']['flood_msg_max'])--Obtain group flood sensitivity
+    local text = 'User '..user..' is flooding'
+    if msgs > NUM_MSG_MAX and not is_mod(msg) then
+      local data = load_data(_config.moderation.data)
+      local anti_flood_stat = data[tostring(chat)]['settings']['anti_flood']
+      if anti_flood_stat == 'kick' then
+        send_large_msg(get_receiver(msg), text)
+        chat_del_user('chat#id'..chat, 'user#id'..user, ok_cb, true)
+        msg = nil
+      elseif anti_flood_stat == 'ban' then
+        send_large_msg(get_receiver(msg), text)
+        -- Save to redis
+        local hash =  'banned:'..chat..':'..user
+        redis:set(hash, true)
+        chat_del_user('chat#id'..chat, 'user#id'..user, ok_cb, true)
+        send_msg('chat#id'..chat, 'User '..user..' banned', ok_cb,  true)
+        msg = nil
       end
-    end
-    local max_msg = NUM_MSG_MAX * 1
-    if msgs > max_msg then
-      local user = msg.from.id
-      -- Ignore mods,owner and admins
-      if is_momod(msg) then 
-        return msg
-      end
-      local chat = msg.to.id
-      local user = msg.from.id
-      -- Return end if user was kicked before
-      if kicktable[user] == true then
-        return
-      end
-      kick_user(user, chat)
-      if msg.to.type == "user" then
-        block_user("user#id"..msg.from.id,ok_cb,false)--Block user if spammed in private
-      end
-      local name = user_print_name(msg.from)
-      --save it to log file
-      savelog(msg.to.id, name.." ["..msg.from.id.."] spammed and kicked ! ")
-      -- incr it on redis
-      local gbanspam = 'gban:spam'..msg.from.id
-      redis:incr(gbanspam)
-      local gbanspam = 'gban:spam'..msg.from.id
-      local gbanspamonredis = redis:get(gbanspam)
-      --Check if user has spammed is group more than 4 times  
-      if gbanspamonredis then
-        if tonumber(gbanspamonredis) ==  4 and not is_owner(msg) then
-          --Global ban that user
-          banall_user(msg.from.id)
-          local gbanspam = 'gban:spam'..msg.from.id
-          --reset the counter
-          redis:set(gbanspam, 0)
-          local username = " "
-          if msg.from.username ~= nil then
-            username = msg.from.username
-          end
-          local name = user_print_name(msg.from)
-          --Send this to that chat
-          send_large_msg("chat#id"..msg.to.id, "User [ "..name.." ]"..msg.from.id.." Globally banned (spamming)")
-          local log_group = 1 --set log group caht id
-          --send it to log group
-          send_large_msg("chat#id"..log_group, "User [ "..name.." ] ( @"..username.." )"..msg.from.id.." Globally banned from ( "..msg.to.print_name.." ) [ "..msg.to.id.." ] (spamming)")
-        end
-      end
-      kicktable[user] = true
-      msg = nil
     end
     redis:setex(hash, TIME_CHECK, msgs+1)
   end
   return msg
 end
 
-local function cron()
-  --clear that table on the top of the plugins
-  kicktable = {}
+function run(msg, matches)
+
+  if not is_admin(msg) then
+    return "For moderators only!"
+  end
+
+  if matches[1] == 'antiflood' then
+  local data = load_data(_config.moderation.data)
+  local anti_flood_stat = data[tostring(msg.to.id)]['settings']['anti_flood']
+    if matches[2] == 'kick' then
+      if anti_flood_stat ~= 'kick' then
+        data[tostring(msg.to.id)]['settings']['anti_flood'] = 'kick'
+        save_data(_config.moderation.data, data)
+      end
+      return 'Anti flood protection already enabled.\nFlooder will be kicked.'
+    end
+    if matches[2] == 'ban' then
+      if anti_flood_stat ~= 'ban' then
+        data[tostring(msg.to.id)]['settings']['anti_flood'] = 'ban'
+        save_data(_config.moderation.data, data)
+      end
+      return 'Anti flood  protection already enabled.\nFlooder will be banned.'
+    end
+    if matches[2] == 'disable' then
+      if anti_flood_stat == 'no' then
+        return 'Anti flood  protection is not enabled.'
+      else
+        data[tostring(msg.to.id)]['settings']['anti_flood'] = 'no'
+        save_data(_config.moderation.data, data)
+        return 'Anti flood  protection has been disabled.'
+      end
+    end
+  end
 end
 
 return {
-  patterns = {},
-  cron = cron,
+  description = "Plugin to kick flooders from group.",
+  usage = {
+    "~antiflood <kick> : Enable flood protection. Flooder will be kicked.",
+    "~antiflood <ban> : Enable flood protection. Flooder will be banned.",
+    "~antiflood <disable> : Disable flood protection"
+  },
+  patterns = {
+    "^~(antiflood) (.*)$"
+  },
+  run = run,
+  privileged = true,
   pre_process = pre_process
 }
 
