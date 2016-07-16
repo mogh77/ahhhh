@@ -128,17 +128,17 @@ local function all(target, receiver)
 end
 
 function run(msg, matches)
-  if matches[1] == "all" and matches[2] and is_owner2(msg.from.id, matches[2]) then
+  if matches[1] == "all" and matches[2] and is_mod(msg.from.id, matches[2]) then
     local receiver = get_receiver(msg)
     local target = matches[2]
     return all(target, receiver)
   end
-  if not is_owner(msg) then
+  if not is_mod(msg) then
     return
   end
   if matches[1] == "all" and not matches[2] then
     local receiver = get_receiver(msg)
-    if not is_momod(msg) then
+    if not is_mod(msg) then
       return
     end
     return all(msg.to.id, receiver)
