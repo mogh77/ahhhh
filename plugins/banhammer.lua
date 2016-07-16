@@ -30,10 +30,10 @@ local function pre_process(msg)
         local banhash = 'addedbanuser:'..msg.to.id..':'..msg.from.id
         local banaddredis = redis:get(banhash) 
         if banaddredis then 
-          if tonumber(banaddredis) == 4 and not is_owner(msg) then 
+          if tonumber(banaddredis) == 4 and not is_momod(msg) then 
             kick_user(msg.from.id, msg.to.id)-- Kick user who adds ban ppl more than 3 times
           end
-          if tonumber(banaddredis) ==  8 and not is_owner(msg) then 
+          if tonumber(banaddredis) ==  8 and not is_momod(msg) then 
             ban_user(msg.from.id, msg.to.id)-- Kick user who adds ban ppl more than 7 times
             local banhash = 'addedbanuser:'..msg.to.id..':'..msg.from.id
             redis:set(banhash, 0)-- Reset the Counter
