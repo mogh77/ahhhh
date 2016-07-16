@@ -585,7 +585,7 @@ function user_print_name(user)
 end
 
 --Check if user is the owner of that group or not
-function is_owner(msg)
+function is_admin(msg)
   local var = false
   local data = load_data(_config.moderation.data)
   local user = msg.from.id
