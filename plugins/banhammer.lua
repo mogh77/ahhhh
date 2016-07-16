@@ -149,7 +149,7 @@ local function run(msg, matches)
 
   if matches[1]:lower() == "banlist" then -- Ban list !
     local chat_id = msg.to.id
-    if matches[2] and is_admin(msg) then
+    if matches[2] and is_momod(msg) then
       chat_id = matches[2] 
     end
     return ban_list(chat_id)
@@ -308,21 +308,21 @@ end
 
 return {
   patterns = {
-    "^[!/]([Bb]anall) (.*)$",
-    "^[!/]([Bb]anall)$",
-    "^[!/]([Bb]anlist) (.*)$",
-    "^[!/]([Bb]anlist)$",
-    "^[!/]([Gg]banlist)$",
-    "^[!/]([Bb]an) (.*)$",
-    "^[!/]([Kk]ick)$",
-    "^[!/]([Uu]nban) (.*)$",
-    "^[!/]([Uu]nbanall) (.*)$",
-    "^[!/]([Uu]nbanall)$",
-    "^[!/]([Kk]ick) (.*)$",
-    "^[!/]([Kk]ickme)$",
-    "^[!/]([Bb]an)$",
-    "^[!/]([Uu]nban)$",
-    "^[!/]([Ii]d)$",
+    "^[~]([Bb]anall) (.*)$",
+    "^[~]([Bb]anall)$",
+    "^[~]([Bb]anlist) (.*)$",
+    "^[~]([Bb]anlist)$",
+    "^[~]([Gg]banlist)$",
+    "^[~]([Bb]an) (.*)$",
+    "^[~]([Kk]ick)$",
+    "^[~]([Uu]nban) (.*)$",
+    "^[~]([Uu]nbanall) (.*)$",
+    "^[~]([Uu]nbanall)$",
+    "^[~]([Kk]ick) (.*)$",
+    "^[~]([Kk]ickme)$",
+    "^[~]([Bb]an)$",
+    "^[~]([Uu]nban)$",
+    "^[~]([Ii]d)$",
     "^!!tgservice (.+)$"
   },
   run = run,
